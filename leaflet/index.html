@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.vectorgrid@latest/dist/Leaflet.VectorGrid.bundled.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Using Leaflet</title>
+  </head>
+  <body>
+     <div id="map" style="height: 100vh;"></div>
+     <script>
+        const scheme = "WebMercatorQuad"
+        var map = L.map('map').setView([45, -75], 10);
+
+        map.addLayer(new L.TileLayer(
+            'https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 16,
+                attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+            }
+        ));
+      
+        var tilesUrl = 'http://localhost:5000/collections/lakes/tiles/{tileMatrixSetId}/{tileMatrix}/{tileRow}/{tileCol}?f=pbf';
+    
+        var url = tilesUrl
+            .replace('{dataset}', 'lakes')
+            .replace('{tileMatrixSetId}', scheme)
+            .replace("tileMatrix", "z")
+        
+            url = url
+                .replace("tileRow", "x")
+                .replace("tileCol", "y");
+            var VectorTileOptions = {
+                interactive: true,
+                rendererFactory: L.canvas.tile,
+                maxZoom: 16,
+                indexMaxZoom: 5,
+                getFeatureId: function(feat) {
+                    return feat.properties["id"]
+                }
+            };
+    
+            var highlight;
+            var clearHighlight = function() {
+                if (highlight) {
+                    tilesPbfLayer.resetFeatureStyle(highlight);
+                }
+                highlight = null;
+            };
+    
+            var tilesPbfLayer = L.vectorGrid.protobuf(url, VectorTileOptions)
+                .on('click', function(e) { // The .on method attaches an event handler
+                    L.popup()
+                        .setContent("<b>Name</b>: " + e.layer.properties.name +
+                            "<br><b>Class</b>: " + e.layer.properties.featureclass)
+                        .setLatLng(e.latlng)
+                        .openOn(map);
+    
+                    clearHighlight();
+                    highlight = e.layer.properties.id;
+                    tilesPbfLayer.setFeatureStyle(highlight, {
+                        weight: 2,
+                        color: 'red',
+                        opacity: 1,
+                        fillColor: 'red',
+                        fill: false,
+                        radius: 6,
+                        fillOpacity: 1
+                    });
+    
+                    L.DomEvent.stop(e);
+                })
+                .addTo(map);
+    
+            map.on('click', clearHighlight);
+        
+    
+        bounds = L.latLngBounds([
+            [
+                -90,
+                -180
+            ],[
+                90,
+                180
+            ]
+        ]);
+        map.fitBounds(bounds, maxZoom=16);
+        
+     </script>
+  </body>
+</html>
